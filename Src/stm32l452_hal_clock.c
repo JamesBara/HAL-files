@@ -517,12 +517,12 @@ void clock_hclk_conf(sys_clk_src clk_src, hse_css css_enable, uint32_t target_fr
     }
     else if (clk_src == SYSCLK_SRC_PLL)
     {
-        if ((RCC->CR & RCC_CR_PLLON) && (RCC->PLLCFGR |= RCC_PLLCFGR_PLLREN))
+        if ((RCC->CR & RCC_CR_PLLON) && (RCC->PLLCFGR & RCC_PLLCFGR_PLLREN))
         {
             uint32_t pllm = ((RCC->PLLCFGR & RCC_PLLCFGR_PLLM)>>RCC_PLLCFGR_PLLM_Pos);
             uint32_t plln = ((RCC->PLLCFGR & RCC_PLLCFGR_PLLN)>>RCC_PLLCFGR_PLLN_Pos);
             uint32_t pllr = ((RCC->PLLCFGR & RCC_PLLCFGR_PLLR)>>RCC_PLLCFGR_PLLR_Pos);
-            src_freq = ((clock_get_pll_src_freq()/pllm)*plln)/pllr;
+            src_freq = ((clock_get_pll_src_freq()/(pllm+1))*plln)/(2*(1+pllr));
         }
     }
     //Calculate the prescaler value
@@ -571,7 +571,8 @@ void clock_hclk_conf(sys_clk_src clk_src, hse_css css_enable, uint32_t target_fr
         FLASH->ACR |= ~(FLASH_ACR_PRFTEN);
 
         //Set wait states
-        uint32_t ws = target_freq/16000000;;
+        uint32_t ws = target_freq/16000000;
+        //Reduce the wait state to the correct one.
         if (target_freq == 16000000 || target_freq==32000000 || target_freq==48000000 || target_freq==64000000 || target_freq==80000000)
         {
             ws--;
@@ -589,6 +590,7 @@ void clock_hclk_conf(sys_clk_src clk_src, hse_css css_enable, uint32_t target_fr
 
         //Set wait states
         uint32_t ws = target_freq/16000000;
+        //Reduce the wait state to the correct one.
         if (target_freq == 16000000 || target_freq==32000000 || target_freq==48000000 || target_freq==64000000 || target_freq==80000000)
         {
             ws--;
