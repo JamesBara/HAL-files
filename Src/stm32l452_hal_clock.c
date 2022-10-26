@@ -5,8 +5,8 @@
  *  calling the functions:
  *  clock_enable_hsi(); ///<Enable hsi oscillator.
  *  clock_conf_msi(uint32_t msi_freq); ///<Enable msi oscillator or change frequency.
- *  clock_conf_hse(uint32_t hse_freq, hse_clk_by hse_by); ///<Enable hse oscillator 
- *  and select the appropriate frequency.
+ *  clock_conf_hse(uint32_t hse_freq, hse_clk_by hse_by); ///<Enable hse oscillator. 
+ *   
  *  If the user wants to enable the pll they need to call the function 
  *  void clock_pll_conf(pll_clk_src clk_src,uint32_t pllr_target_freq,
  *  uint32_t pllq_target_freq,uint32_t pllp_target_freq);
@@ -135,7 +135,7 @@ void clock_enable_hsi()
         //Wait for hsi to start. If it fails to start within 2 secs go to error.
         while (!(RCC->CR & RCC_CR_HSIRDY))
         {
-            if (sys_get_systick()-start<2)
+            if (sys_get_systick()-start>2)
             {
                 error_handler();
             }
@@ -202,7 +202,7 @@ void clock_conf_msi(uint32_t msi_freq)
         start = sys_get_systick();
         while (!(RCC->CR & RCC_CR_MSIRDY))
         {
-            if (sys_get_systick()-start<2)
+            if (sys_get_systick()-start>2)
             {
                 error_handler();
             }
@@ -218,11 +218,17 @@ void clock_conf_msi(uint32_t msi_freq)
     start = sys_get_systick();
     while (!(RCC->CR & RCC_CR_MSIRDY))
     {
-        if (sys_get_systick()-start<2)
+        if (sys_get_systick()-start>2)
         {
             error_handler();
         }
     }
+    //If HCLK is set to msi, update SystemCoreClock.
+    if (((RCC->CFGR & RCC_CFGR_SWS)>>RCC_CFGR_SWS_Pos)==RCC_CFGR_SWS_MSI)
+    {
+        SystemCoreClock = clock_get_msi_freq();
+    }
+
 }
 
 /**
@@ -249,7 +255,7 @@ void clock_conf_hse(uint32_t hse_freq, hse_clk_by hse_by)
             start = sys_get_systick();
             while (!(RCC->CR & RCC_CR_HSERDY))
             {
-                if (sys_get_systick()-start<100)
+                if (sys_get_systick()-start>100)
                 {
                     error_handler();
                 }
@@ -261,7 +267,7 @@ void clock_conf_hse(uint32_t hse_freq, hse_clk_by hse_by)
         RCC->CR |= RCC_CR_HSEON;
         while (!(RCC->CR & RCC_CR_HSERDY))
         {
-            if (sys_get_systick()-start<100)
+            if (sys_get_systick()-start>100)
             {
                 error_handler();
             }
@@ -320,7 +326,7 @@ void clock_pll_conf(pll_clk_src clk_src,uint32_t pllr_target_freq,uint32_t pllq_
         start = sys_get_systick();
         while(RCC->CR & RCC_CR_PLLRDY)
         {
-            if (sys_get_systick()-start<100)
+            if (sys_get_systick()-start>100)
             {
                 error_handler();
             }
@@ -343,7 +349,7 @@ void clock_pll_conf(pll_clk_src clk_src,uint32_t pllr_target_freq,uint32_t pllq_
                         if (((src_freq/pllm)*plln)/pllr>=8000000 && ((src_freq/pllm)*plln)/pllr<=80000000 && ((src_freq/pllm)*plln)/pllr == pllr_target_freq)
                         {
                             pllr_reg_val = (pllr/2)-1;
-                            if (!pllq_target_freq && pllp_target_freq)
+                            if (!pllq_target_freq && !pllp_target_freq)
                             {
                                 pllm_reg_val = pllm-1;
                                 plln_reg_val = plln;
@@ -398,10 +404,10 @@ void clock_pll_conf(pll_clk_src clk_src,uint32_t pllr_target_freq,uint32_t pllq_
     //Test the result validity.
     if (pllm_reg_val!= 0xFF && plln_reg_val!=0xFF)
     {
-        vco = (src_freq/pllm_reg_val)*plln_reg_val;
+        vco = (src_freq/(pllm_reg_val+1))*plln_reg_val;
     }
 
-    if (pllr_reg_val!=0xFF && vco/pllr_reg_val==pllr_target_freq)
+    if (pllr_reg_val!=0xFF && vco/((pllr_reg_val+1)*2)==pllr_target_freq)
     {
         //We have everything we need. Time to set the registers.
         //Disable the pll
@@ -410,7 +416,7 @@ void clock_pll_conf(pll_clk_src clk_src,uint32_t pllr_target_freq,uint32_t pllq_
         start = sys_get_systick();
         while(RCC->CR & RCC_CR_PLLRDY)
         {
-            if (sys_get_systick()-start<2)
+            if (sys_get_systick()-start>2)
             {
                 error_handler();
             }
@@ -428,7 +434,7 @@ void clock_pll_conf(pll_clk_src clk_src,uint32_t pllr_target_freq,uint32_t pllq_
         RCC->PLLCFGR &= ~(RCC_PLLCFGR_PLLR);
         RCC->PLLCFGR |= pllr_reg_val << RCC_PLLCFGR_PLLR_Pos;
         //Set pllq
-        if (pllq_target_freq && pllq_reg_val!=0xFF && vco/pllq_reg_val==pllq_target_freq)
+        if (pllq_target_freq && pllq_reg_val!=0xFF && vco/((pllq_reg_val+1)*2)==pllq_target_freq)
         {
             RCC->PLLCFGR &= ~(RCC_PLLCFGR_PLLQ);
             RCC->PLLCFGR |= pllq_reg_val << RCC_PLLCFGR_PLLQ_Pos;
@@ -444,7 +450,7 @@ void clock_pll_conf(pll_clk_src clk_src,uint32_t pllr_target_freq,uint32_t pllq_
         start = sys_get_systick();
         while(RCC->CR & RCC_CR_PLLRDY)
         {
-            if (sys_get_systick()-start<2)
+            if (sys_get_systick()-start>2)
             {
                 error_handler();
             }
@@ -479,7 +485,7 @@ void clock_pll_conf(pll_clk_src clk_src,uint32_t pllr_target_freq,uint32_t pllq_
  *                   CSS_OFF = 0x00, ///< Don't use Clock Security System.
  *                   CSS_ON = 0x01 ///< Use Clock Security System.
  * @param target_freq This parameter sets the HCLK frequency that the user wants to achieve in Hz. (target_freq<=80000000Hz)
- *                    
+ *                  
  */
 void clock_hclk_conf(sys_clk_src clk_src, hse_css css_enable, uint32_t target_freq)
 {
@@ -599,8 +605,26 @@ void clock_hclk_conf(sys_clk_src clk_src, hse_css css_enable, uint32_t target_fr
         RCC->CFGR &= ~(RCC_CFGR_HPRE);
         RCC->CFGR |= ahb_presc_val<<RCC_CFGR_HPRE_Pos;
     }
-    //Set NVIC clock.
-    SystemCoreClock = target_freq;
-    //initialize ticks.
-    sys_set_systick();
+    //Make sure the clock is properly set. Then use it to set the NVIC clock.
+    if (!ahb_presc_val>>0x03)
+    {
+        if (src_freq == target_freq)
+        {
+            //Set NVIC clock.
+            SystemCoreClock = target_freq;
+            //initialize ticks.
+            sys_set_systick();
+        }
+    }
+    else
+    {
+        if (src_freq/ahb_presc[((ahb_presc_val+1)&0x07)] == target_freq)
+        {
+            //Set NVIC clock.
+            SystemCoreClock = target_freq;
+            //initialize ticks.
+            sys_set_systick();
+        }
+    }
+
 }

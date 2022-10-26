@@ -1,3 +1,32 @@
+/**************************************************************************************
+ *  How to use:
+ *  
+ *  The user should first select the mode of their choice by calling the functions and 
+ *  selecting the pin as shown on the pinout (ex. PA5):
+ *  gpio_analog_conf(gpio_pin pin); ///< Analog mode.
+ *  gpio_output_conf(gpio_pin pin, gpio_type type, gpio_speed speed,
+ *  gpio_resistor resistor); ///< Output mode.
+ *  gpio_input_conf(gpio_pin pin, gpio_resistor resistor); ///< Input mode.
+ *  gpio_alt_func_init(gpio_pin pin, gpio_type type, gpio_speed speed,
+ *  gpio_resistor resistor, gpio_alt_func alt_func); ///< Alternate function mode.
+ *  
+ *  Then the user can call the functions below to read, write or toggle the pin that they
+ *  configured in the previous step in blocking:
+ *  gpio_pin_state gpio_read(gpio_pin pin);
+ *	gpio_write(gpio_pin pin, gpio_pin_state state);
+ *  gpio_toggle(gpio_pin pin);
+ * 
+ * 	The user could also enalbe interrupts by calling the function:
+ *  gpio_interrupt_en(gpio_pin pin, gpio_edge_trigger edge, uint32_t priority);
+ * 
+ *  Then implement their own handler on the interrupt by using the function:
+ *  void gpio_interrupt_callback(gpio_pin_num num);
+ * 
+ *  @todo Add grouping in interrupt priorities.
+ *  @todo Disable clocks, interrupts and deinit the configurations.
+ * 
+ ***************************************************************************************/
+
 #include "stm32l452_hal_gpio.h"
 
 static void gpio_enable_clock(GPIO_TypeDef *gpio);
