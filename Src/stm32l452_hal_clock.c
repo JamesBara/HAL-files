@@ -485,7 +485,7 @@ void clock_pll_conf(pll_clk_src clk_src,uint32_t pllr_target_freq,uint32_t pllq_
  *                   CSS_OFF = 0x00, ///< Don't use Clock Security System.
  *                   CSS_ON = 0x01 ///< Use Clock Security System.
  * @param target_freq This parameter sets the HCLK frequency that the user wants to achieve in Hz. (target_freq<=80000000Hz)
- *                  
+ *           
  */
 void clock_hclk_conf(sys_clk_src clk_src, hse_css css_enable, uint32_t target_freq)
 {
@@ -526,7 +526,7 @@ void clock_hclk_conf(sys_clk_src clk_src, hse_css css_enable, uint32_t target_fr
         }
     }
     //Calculate the prescaler value
-    for (uint32_t i=0;i<9;i++)
+    for (uint32_t i=0;i<=8;i++)
     {
         if (src_freq/ahb_presc[i]<=80000000 && src_freq/ahb_presc[i]==target_freq)
         {
@@ -572,7 +572,7 @@ void clock_hclk_conf(sys_clk_src clk_src, hse_css css_enable, uint32_t target_fr
 
         //Set wait states
         uint32_t ws = target_freq/16000000;
-        //Reduce the wait state to the correct one.
+        //Reduce the wait state to the correct one.  
         if (target_freq == 16000000 || target_freq==32000000 || target_freq==48000000 || target_freq==64000000 || target_freq==80000000)
         {
             ws--;
@@ -608,7 +608,7 @@ void clock_hclk_conf(sys_clk_src clk_src, hse_css css_enable, uint32_t target_fr
         RCC->CFGR |= ahb_presc_val<<RCC_CFGR_HPRE_Pos;
     }
     //Make sure the clock is properly set. Then use it to set the NVIC clock.
-    if (!ahb_presc_val>>0x03)
+    if (!(ahb_presc_val>>0x03))
     {
         if (src_freq == target_freq)
         {
@@ -627,6 +627,78 @@ void clock_hclk_conf(sys_clk_src clk_src, hse_css css_enable, uint32_t target_fr
             //initialize ticks.
             sys_set_systick();
         }
+    }
+
+}
+
+/**
+ * @brief Enable or change the peripheral clock frequency.
+ * 
+ * @note Peripheral prescaler value is calculated automatically, if the target frequency is
+ *       incorrect a prescaler value of 0 (peripheral frequency = HCLK) is selected.
+ * 
+ * @param apb_per This parameter allows the choice between APB1 or ABP2 peripheral clock 
+ *                and can be any of the values:
+ * 	              APB_SEL_1 = 0x01,
+ *	              APB_SEL_2 = 0x02
+ * @param target_freq This parameter can be equal to HCLK or HCLK devided by the prescaler.
+ */
+void clock_periph_conf(apb_per_sel apb_per, uint32_t target_freq)
+{
+    uint32_t apb_presc = 0;
+    for (uint32_t i=0;i<=3;i++)
+    {
+        if (SystemCoreClock/(1<<(i+1)) == target_freq)
+        {
+            apb_presc = 0x04 | i;
+            break;
+        }
+    }
+
+    if(apb_per==APB_SEL_1)
+    {
+            //Set prescaler.
+            RCC->CFGR &= ~(RCC_CFGR_PPRE1);
+            RCC->CFGR |= apb_presc<<RCC_CFGR_PPRE1_Pos;
+    }
+    else
+    {
+        //Set prescaler.
+        RCC->CFGR &= ~(RCC_CFGR_PPRE2);
+        RCC->CFGR |= apb_presc<<RCC_CFGR_PPRE2_Pos;
+    }
+}
+
+/**
+ * @brief Get the frequency of a peripheral.
+ * 
+ * @param apb_per This parameter allows the choice between APB1 or ABP2 peripheral clock 
+ *                and can be any of the values:
+ * 	              APB_SEL_1 = 0x01,
+ *	              APB_SEL_2 = 0x02
+ * @return uint32_t Frequency in Hz.
+ */
+uint32_t clock_get_periph_freq(apb_per_sel apb_per)
+{
+    uint32_t apb_presc = 0;
+
+    //Get the prescaler value for the selected peripheral.
+    if(apb_per==APB_SEL_1)
+    {
+        apb_presc = ((RCC->CFGR & RCC_CFGR_PPRE1)>>RCC_CFGR_PPRE1_Pos);
+    }
+    else
+    {
+        apb_presc = ((RCC->CFGR & RCC_CFGR_PPRE2)>>RCC_CFGR_PPRE2_Pos);
+    }
+    
+    if (!(apb_presc & 0x04))
+    {
+        return SystemCoreClock;
+    }
+    else
+    {
+        return SystemCoreClock/(1<<((apb_presc & 0x03)+1));
     }
 
 }

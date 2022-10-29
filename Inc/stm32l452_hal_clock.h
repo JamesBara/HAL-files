@@ -9,6 +9,12 @@ extern "C" {
 
 typedef enum
 {
+	APB_SEL_1 = 0x01,
+	APB_SEL_2 = 0x02
+}apb_per_sel;
+
+typedef enum
+{
 	PLL_SRC_NONE = 0x00,
 	PLL_SRC_MSI = 0x01,
 	PLL_SRC_HSI = 0x02,
@@ -52,17 +58,10 @@ void clock_conf_hse(uint32_t hse_freq, hse_clk_by hse_by); //Select 4000000Hz-48
 uint32_t clock_get_sysclk_freq();
 void clock_pll_conf(pll_clk_src clk_src,uint32_t pllr_target_freq,uint32_t pllq_target_freq,uint32_t pllp_target_freq);
 void clock_hclk_conf(sys_clk_src clk_src, hse_css css_enable, uint32_t target_freq);
+void clock_periph_conf(apb_per_sel apb_per, uint32_t target_freq);
+uint32_t clock_get_periph_freq(apb_per_sel apb_per);
 
 
-
-
-
-
-
-
-
-
-//void clock_hckl_init(hs_clk_src clk_src);
 
 #ifdef __cplusplus
 }

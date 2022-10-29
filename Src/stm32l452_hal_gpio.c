@@ -205,7 +205,7 @@ void gpio_alt_func_init(gpio_pin pin, gpio_type type, gpio_speed speed, gpio_res
     gpio->OTYPER |= (type<<num);
 	//Set speed
 	gpio->OSPEEDR &= ~(0x03<<num*0x02);
-	gpio->OSPEEDR &= ~(speed<<num*0x02);
+	gpio->OSPEEDR |= speed<<num*0x02;
 	//Set the resistors
 	gpio->PUPDR &= ~(0x03<<num*0x02);
 	gpio->PUPDR |= (resistor<<num*0x02);
@@ -220,7 +220,6 @@ void gpio_alt_func_init(gpio_pin pin, gpio_type type, gpio_speed speed, gpio_res
 		gpio-> AFR[1] &= ~(0x0F<<((num-0x08)*0x04));
 		gpio-> AFR[1] |= alt_func<<((num-0x08)*0x04);
 	}
-
 }
 
 /**
