@@ -124,6 +124,7 @@ static uint8_t uart_gpio_init(USART_TypeDef *usart, gpio_pin rx, gpio_pin tx)
  * @note This function only enable asynchronous blocking communication.
  * 
  * @todo Maybe add auto baud rate?
+ * @todo add 9 bit word method.
  * 
  * @param usart This parameter allows the choice between different USART peripherals and can be of value:
  *              USART1
@@ -365,7 +366,7 @@ uint8_t uart_transmit_data(USART_TypeDef *usart, uint8_t *data, uint32_t size, u
  * @brief Overwrite the weak function _write found in syscalls.c 
  *        to enable printf on nucleo stm32l452re.
  * 
- * @note to use this usart2 needs to be enabled first on pins PA2 and PA3, stdio.h should be 
+ * @note to use printf usart2 needs to be enabled first on pins PA2 and PA3, stdio.h should be 
  *       included.
  * 
  */
@@ -388,3 +389,235 @@ int _write( int handle, char* data, int size ) {
   return size;
 }
 #endif
+
+
+
+/**
+*@todo 
+**/
+void uart_it_conf(USART_TypeDef *usart, usart_clk_src clk_src, gpio_pin rx, gpio_pin tx, uint32_t baud_rate, usart_word_length word_length, usart_parity parity, usart_stop_bits stop_bits, usart_oversampling oversampling, idle_it idle_ie, uint32_t priority)
+{
+    IRQn_Type irq;
+    uart_conf(usart, clk_src, rx, tx, baud_rate, word_length, parity, stop_bits, oversampling);
+    //Enable Transmit data register, Transmission complete, Read data register and Parity error interrupts.
+    usart->CR1 |= (USART_CR1_TXEIE | USART_CR1_TCIE | USART_CR1_RXNEIE | USART_CR1_PEIE | (idle_ie<<USART_CR1_IDLEIE_Pos));
+    //Enable framing error, overrun error or noise flag
+    usart->CR3 |= USART_CR3_EIE;
+
+    if (usart == USART1)
+    {
+        irq = USART1_IRQn;
+    }
+    else if(usart == USART2)
+    {
+        irq = USART2_IRQn;
+    }
+    else if(usart == USART3)
+    {
+        irq = USART3_IRQn;
+    }
+    else if(usart == UART4)
+    {
+        irq = UART4_IRQn;
+    }
+    else
+    {
+        error_handler();
+    }
+
+ 	NVIC_SetPriority(irq,priority);
+	NVIC_EnableIRQ(irq);
+}
+
+/************************************************
+ *  Interrupt handlers.
+ ***********************************************/
+void USART1_IRQn_handler()
+{
+	if (USART1->ISR & USART_ISR_TXE)
+	{
+        /*The user can clear the bit by implementing the callback function
+         * and tranfering new data in TDR Register.
+         */
+        usart_it_txe_callback(USART1);
+	}
+    else if (USART1->ISR & USART_ISR_TC)
+    {
+        //Clear interrupt then handle it.
+        USART1->ICR |= USART_ICR_TCCF;
+        usart_it_tc_callback(USART1);
+    }
+    else if (USART1->ISR & USART_ISR_RXNE)
+    {
+        /*The user can clear the bit by implementing the callback function
+         * and reading the data from the RDR Register.
+         */
+        usart_it_rxne_callback(USART1);
+    }
+    else if ((USART1->ISR & USART_ISR_PE) || (USART1->ISR & USART_CR3_EIE))
+    {
+        //The user should clear the bit of the error and handle it.
+        usart_it_err_callback(USART1);
+    }
+    else if ((USART1->ISR & USART_ISR_IDLE))
+    {
+        //Clear interrupt then handle it.
+        USART1->ICR |= USART_ICR_IDLECF;
+        usart_it_idle_callback(USART1);
+    }     
+}
+
+void USART2_IRQn_handler()
+{
+	if (USART2->ISR & USART_ISR_TXE)
+	{
+        /*The user can clear the bit by implementing the callback function
+         * and tranfering new data in TDR Register.
+         */
+        usart_it_txe_callback(USART2);
+	}
+    else if (USART2->ISR & USART_ISR_TC)
+    {
+        //Clear interrupt then handle it.
+        USART2->ICR |= USART_ICR_TCCF;
+        usart_it_tc_callback(USART2);
+    }
+    else if (USART2->ISR & USART_ISR_RXNE)
+    {
+        /*The user can clear the bit by implementing the callback function
+         * and reading the data from the RDR Register.
+         */
+        usart_it_rxne_callback(USART2);
+    }
+    else if ((USART2->ISR & USART_ISR_PE) || (USART2->ISR & USART_CR3_EIE))
+    {
+        //The user should clear the bit of the error and handle it.
+        usart_it_err_callback(USART2);
+    }
+    else if ((USART2->ISR & USART_ISR_IDLE))
+    {
+        //Clear interrupt then handle it.
+        USART2->ICR |= USART_ICR_IDLECF;
+        usart_it_idle_callback(USART2);
+    }    
+}
+
+void USART3_IRQn_handler()
+{
+	if (USART3->ISR & USART_ISR_TXE)
+	{
+        /*The user can clear the bit by implementing the callback function
+         * and tranfering new data in TDR Register.
+         */
+        usart_it_txe_callback(USART3);
+	}
+    else if (USART3->ISR & USART_ISR_TC)
+    {
+        //Clear interrupt then handle it.
+        USART3->ICR |= USART_ICR_TCCF;
+        usart_it_tc_callback(USART3);
+    }
+    else if (USART3->ISR & USART_ISR_RXNE)
+    {
+        /*The user can clear the bit by implementing the callback function
+         * and reading the data from the RDR Register.
+         */
+        usart_it_rxne_callback(USART3);
+    }
+    else if ((USART3->ISR & USART_ISR_PE) || (USART3->ISR & USART_CR3_EIE))
+    {
+        //The user should clear the bit of the error and handle it.
+        usart_it_err_callback(USART3);
+    }
+    else if ((USART3->ISR & USART_ISR_IDLE))
+    {
+        //Clear interrupt then handle it.
+        USART3->ICR |= USART_ICR_IDLECF;
+        usart_it_idle_callback(USART3);
+    }    
+}
+
+void UART4_IRQn_handler()
+{
+	if (UART4->ISR & USART_ISR_TXE)
+	{
+        /*The user can clear the bit by implementing the callback function
+         * and tranfering new data in TDR Register.
+         */
+        usart_it_txe_callback(UART4);
+	}
+    else if (UART4->ISR & USART_ISR_TC)
+    {
+        //Clear interrupt then handle it.
+        UART4->ICR |= USART_ICR_TCCF;
+        usart_it_tc_callback(UART4);
+    }
+    else if (UART4->ISR & USART_ISR_RXNE)
+    {
+        /*The user can clear the bit by implementing the callback function
+         * and reading the data from the RDR Register.
+         */
+        usart_it_rxne_callback(UART4);
+    }
+    else if ((UART4->ISR & USART_ISR_PE) || (UART4->ISR & USART_CR3_EIE))
+    {
+        //The user should clear the bit of the error and handle it.
+        usart_it_err_callback(UART4);
+    }
+    else if ((UART4->ISR & USART_ISR_IDLE))
+    {
+        //Clear interrupt then handle it.
+        UART4->ICR |= USART_ICR_IDLECF;
+        usart_it_idle_callback(UART4);
+    }    
+}
+
+/**
+ * @brief Callback function can be overwritten by the user.
+ * 
+ */
+__attribute__((weak)) void usart_it_tc_callback(USART_TypeDef *usart)
+{
+
+
+}
+
+__attribute__((weak)) void usart_it_txe_callback(USART_TypeDef *usart)
+{
+
+
+}
+
+__attribute__((weak)) void usart_it_rxne_callback(USART_TypeDef *usart)
+{
+
+
+}
+__attribute__((weak)) void usart_it_idle_callback(USART_TypeDef *usart)
+{
+
+
+}
+
+__attribute__((weak)) void usart_it_err_callback(USART_TypeDef *usart)
+{
+
+
+}
+
+/**
+*@todo 
+**/
+void uart_dma_conf(USART_TypeDef *usart, usart_clk_src clk_src, gpio_pin rx, gpio_pin tx, uint32_t baud_rate, usart_word_length word_length, usart_parity parity, usart_stop_bits stop_bits, usart_oversampling oversampling)
+{
+
+}
+
+
+/**
+*@todo 
+**/
+void uart_hf_duplex_conf(USART_TypeDef *usart, usart_clk_src clk_src, gpio_pin rx, gpio_pin tx, uint32_t baud_rate, usart_word_length word_length, usart_parity parity, usart_stop_bits stop_bits, usart_oversampling oversampling)
+{
+
+}

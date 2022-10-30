@@ -16,8 +16,8 @@
  *	gpio_write(gpio_pin pin, gpio_pin_state state);
  *  gpio_toggle(gpio_pin pin);
  * 
- * 	The user could also enalbe interrupts by calling the function:
- *  gpio_interrupt_en(gpio_pin pin, gpio_edge_trigger edge, uint32_t priority);
+ * 	The user could also configure the use of an input with interrupts by calling the function:
+ *  gpio_input_it_conf(gpio_pin pin, gpio_resistor resistor, gpio_edge_trigger edge, uint32_t priority);
  * 
  *  Then implement their own handler on the interrupt by using the function:
  *  void gpio_interrupt_callback(gpio_pin_num num);
@@ -314,19 +314,25 @@ void gpio_toggle(gpio_pin pin)
  * 
  * @param pin This parameter can be any of the values PXY (where X = A..C or H and Y = 0~15)
  * 				PXY is the friendly name of a pin as shown on the datasheet.
+ * @param resistor This parameter can be any of the values:
+ *					NO_PUPD = 0x00, ///< No pull-up, pull-down
+ *					PU = 0x01, ///< Pull-up
+ *					PD = 0x02 ///< Pull-down
  * @param edge This parameter can be any of the values:
  *			 	RISING_EDGE = 0x00,
  *				FALLING_EDGE = 0x01,
  *				RISING_FALLING_EDGE = 0x02
  * @param priority This parameter sets the interrupt priority. Lower number is higher priority.
  */
-void gpio_interrupt_en(gpio_pin pin, gpio_edge_trigger edge, uint32_t priority)
+void gpio_input_it_conf(gpio_pin pin, gpio_resistor resistor, gpio_edge_trigger edge, uint32_t priority)
 {
 	GPIO_TypeDef *gpio = gpio_parse_gpio(pin);
 	gpio_pin_num num = gpio_parse_pin_num(pin);
 
 	IRQn_Type irq;
-
+	//Configure as a normal input first.
+	gpio_input_conf(pin,resistor);
+	//Then go through with the rest of the configuration.
 	//Enable the clock.
 	RCC->APB2ENR |= RCC_APB2ENR_SYSCFGEN;
 

@@ -203,7 +203,7 @@ gpio_pin_state gpio_read(gpio_pin pin);
 void gpio_write(gpio_pin pin, gpio_pin_state state);
 void gpio_toggle(gpio_pin pin);
 
-void gpio_interrupt_en(gpio_pin pin, gpio_edge_trigger edge, uint32_t priority);
+void gpio_input_it_conf(gpio_pin pin, gpio_resistor resistor, gpio_edge_trigger edge, uint32_t priority);
 void gpio_interrupt_callback(gpio_pin_num num);
 
 

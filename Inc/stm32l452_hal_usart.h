@@ -48,7 +48,11 @@ typedef enum
 	USART_SRC_LSE = 0x03 ///< Usart uses LSE.
 }usart_clk_src;
 
-
+typedef enum
+{
+    IDLE_LINE_IT_DIS = 0x00, ///< Default
+    IDLE_LINE_IT_EN = 0x01 ///< Enable interrupts for Idle line detected
+}idle_it;
 
 void uart_conf(USART_TypeDef *usart, usart_clk_src clk_src, gpio_pin rx, gpio_pin tx, uint32_t baud_rate, usart_word_length word_length, usart_parity parity, usart_stop_bits stop_bits, usart_oversampling oversampling);
 
