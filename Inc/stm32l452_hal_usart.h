@@ -59,7 +59,11 @@ void uart_conf(USART_TypeDef *usart, usart_clk_src clk_src, gpio_pin rx, gpio_pi
 uint8_t uart_received_data(USART_TypeDef *usart, uint8_t *data, uint32_t size, uint32_t timeout);
 uint8_t uart_transmit_data(USART_TypeDef *usart, uint8_t *data, uint32_t size, uint32_t timeout);
 
-
+void usart_it_tc_callback(USART_TypeDef *usart);
+void usart_it_txe_callback(USART_TypeDef *usart);
+void usart_it_rxne_callback(USART_TypeDef *usart);
+void usart_it_idle_callback(USART_TypeDef *usart);
+void usart_it_err_callback(USART_TypeDef *usart);
 
 
 

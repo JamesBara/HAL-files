@@ -169,10 +169,13 @@ static uint8_t uart_gpio_init(USART_TypeDef *usart, gpio_pin rx, gpio_pin tx)
  */
 void uart_conf(USART_TypeDef *usart, usart_clk_src clk_src, gpio_pin rx, gpio_pin tx, uint32_t baud_rate, usart_word_length word_length, usart_parity parity, usart_stop_bits stop_bits, usart_oversampling oversampling)
 {
+    //Set the pins as alternative functions.
     if (uart_gpio_init(usart,rx,tx))
     {
         error_handler();
     }
+    //Start the uart clock.
+    usart_enable_clock(usart,clk_src);
     uint32_t usartdiv;
     apb_per_sel apb_per;
     //Select peripheral clock depending on usart.
@@ -190,7 +193,7 @@ void uart_conf(USART_TypeDef *usart, usart_clk_src clk_src, gpio_pin rx, gpio_pi
     usart->CR1 &=  ~(USART_CR1_UE);
 
     //Calculate the baud rate.
-    usartdiv = (oversampling+1)*clock_get_periph_freq(apb_per);
+    usartdiv = ((oversampling+1)*clock_get_periph_freq(apb_per))/baud_rate;
     //Set the baud rate.
     if (!oversampling)
     {
@@ -237,7 +240,6 @@ void uart_conf(USART_TypeDef *usart, usart_clk_src clk_src, gpio_pin rx, gpio_pi
     usart->CR1 |= (oversampling<<USART_CR1_OVER8_Pos);
     //Enable uart.
     usart->CR1 |=  USART_CR1_UE;
-    usart_enable_clock(usart,clk_src);
 }
 
 /**
@@ -432,7 +434,7 @@ void uart_it_conf(USART_TypeDef *usart, usart_clk_src clk_src, gpio_pin rx, gpio
 /************************************************
  *  Interrupt handlers.
  ***********************************************/
-void USART1_IRQn_handler()
+void USART1_IRQHandler()
 {
 	if (USART1->ISR & USART_ISR_TXE)
 	{
@@ -467,7 +469,7 @@ void USART1_IRQn_handler()
     }     
 }
 
-void USART2_IRQn_handler()
+void USART2_IRQHandler()
 {
 	if (USART2->ISR & USART_ISR_TXE)
 	{
@@ -502,7 +504,7 @@ void USART2_IRQn_handler()
     }    
 }
 
-void USART3_IRQn_handler()
+void USART3_IRQHandler()
 {
 	if (USART3->ISR & USART_ISR_TXE)
 	{
@@ -537,7 +539,7 @@ void USART3_IRQn_handler()
     }    
 }
 
-void UART4_IRQn_handler()
+void UART4_IRQHandler()
 {
 	if (UART4->ISR & USART_ISR_TXE)
 	{
