@@ -4,6 +4,7 @@
 #include "stdint.h"
 #include "stm32l452xx.h"
 #include "system_stm32l4xx.h"
+#include <stdio.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -15,7 +16,7 @@ extern uint32_t hse_frequency;
 
 void sys_set_systick(void); // Set systick in ms.
 uint32_t sys_get_systick(void); //get the time in ms.
-void error_handler(void);
+void error_handler(char* f,uint32_t l);
 void sys_ms_delay(uint32_t delay);
 
 

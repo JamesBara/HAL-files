@@ -172,7 +172,7 @@ void uart_conf(USART_TypeDef *usart, usart_clk_src clk_src, gpio_pin rx, gpio_pi
     //Set the pins as alternative functions.
     if (uart_gpio_init(usart,rx,tx))
     {
-        error_handler();
+        error_handler(__FILE__,__LINE__);
     }
     //Start the uart clock.
     usart_enable_clock(usart,clk_src);
@@ -364,35 +364,6 @@ uint8_t uart_transmit_data(USART_TypeDef *usart, uint8_t *data, uint32_t size, u
     return 0;
 }
 
-/**
- * @brief Overwrite the weak function _write found in syscalls.c 
- *        to enable printf on nucleo stm32l452re.
- * 
- * @note to use printf usart2 needs to be enabled first on pins PA2 and PA3, stdio.h should be 
- *       included.
- * 
- */
-#ifdef DEBUG
-int _write( int handle, char* data, int size ) {
-    for (uint32_t i=0;i<size;i++)
-    {
-
-        uint32_t start = sys_get_systick();
-        while (!(USART2->ISR & USART_ISR_TXE))
-        {
-            if (sys_get_systick()-start>500)
-            {
-                return -1;
-            }
-        }
-        USART2->TDR = *data;
-        data++;        
-    } 
-  return size;
-}
-#endif
-
-
 
 /**
 *@todo 
@@ -424,7 +395,7 @@ void uart_it_conf(USART_TypeDef *usart, usart_clk_src clk_src, gpio_pin rx, gpio
     }
     else
     {
-        error_handler();
+        error_handler(__FILE__,__LINE__);
     }
 
  	NVIC_SetPriority(irq,priority);
@@ -436,6 +407,24 @@ void uart_it_conf(USART_TypeDef *usart, usart_clk_src clk_src, gpio_pin rx, gpio
  ***********************************************/
 void USART1_IRQHandler()
 {
+    if ((USART1->ISR & USART_ISR_PE) || (USART1->ISR & USART_CR3_EIE))
+    {
+        //The user should clear the bit of the error and handle it.
+        usart_it_err_callback(USART1);
+    }
+    if ((USART1->ISR & USART_ISR_IDLE))
+    {
+        //Clear interrupt then handle it.
+        USART1->ICR |= USART_ICR_IDLECF;
+        usart_it_idle_callback(USART1);
+    }
+    if (USART1->ISR & USART_ISR_RXNE)
+    {
+        /*The user can clear the bit by implementing the callback function
+         * and reading the data from the RDR Register.
+         */
+        usart_it_rxne_callback(USART1);
+    }     
 	if (USART1->ISR & USART_ISR_TXE)
 	{
         /*The user can clear the bit by implementing the callback function
@@ -443,34 +432,34 @@ void USART1_IRQHandler()
          */
         usart_it_txe_callback(USART1);
 	}
-    else if (USART1->ISR & USART_ISR_TC)
+    if (USART1->ISR & USART_ISR_TC)
     {
         //Clear interrupt then handle it.
         USART1->ICR |= USART_ICR_TCCF;
         usart_it_tc_callback(USART1);
     }
-    else if (USART1->ISR & USART_ISR_RXNE)
-    {
-        /*The user can clear the bit by implementing the callback function
-         * and reading the data from the RDR Register.
-         */
-        usart_it_rxne_callback(USART1);
-    }
-    else if ((USART1->ISR & USART_ISR_PE) || (USART1->ISR & USART_CR3_EIE))
-    {
-        //The user should clear the bit of the error and handle it.
-        usart_it_err_callback(USART1);
-    }
-    else if ((USART1->ISR & USART_ISR_IDLE))
-    {
-        //Clear interrupt then handle it.
-        USART1->ICR |= USART_ICR_IDLECF;
-        usart_it_idle_callback(USART1);
-    }     
 }
 
 void USART2_IRQHandler()
 {
+    if ((USART2->ISR & USART_ISR_PE) || (USART2->ISR & USART_CR3_EIE))
+    {
+        //The user should clear the bit of the error and handle it.
+        usart_it_err_callback(USART2);
+    }
+    if ((USART2->ISR & USART_ISR_IDLE))
+    {
+        //Clear interrupt then handle it.
+        USART2->ICR |= USART_ICR_IDLECF;
+        usart_it_idle_callback(USART2);
+    }    
+    if (USART2->ISR & USART_ISR_RXNE)
+    {
+        /*The user can clear the bit by implementing the callback function
+         * and reading the data from the RDR Register.
+         */
+        usart_it_rxne_callback(USART2);
+    }
 	if (USART2->ISR & USART_ISR_TXE)
 	{
         /*The user can clear the bit by implementing the callback function
@@ -478,69 +467,71 @@ void USART2_IRQHandler()
          */
         usart_it_txe_callback(USART2);
 	}
-    else if (USART2->ISR & USART_ISR_TC)
+    if (USART2->ISR & USART_ISR_TC)
     {
         //Clear interrupt then handle it.
         USART2->ICR |= USART_ICR_TCCF;
         usart_it_tc_callback(USART2);
     }
-    else if (USART2->ISR & USART_ISR_RXNE)
-    {
-        /*The user can clear the bit by implementing the callback function
-         * and reading the data from the RDR Register.
-         */
-        usart_it_rxne_callback(USART2);
-    }
-    else if ((USART2->ISR & USART_ISR_PE) || (USART2->ISR & USART_CR3_EIE))
-    {
-        //The user should clear the bit of the error and handle it.
-        usart_it_err_callback(USART2);
-    }
-    else if ((USART2->ISR & USART_ISR_IDLE))
-    {
-        //Clear interrupt then handle it.
-        USART2->ICR |= USART_ICR_IDLECF;
-        usart_it_idle_callback(USART2);
-    }    
+
+
 }
 
 void USART3_IRQHandler()
 {
-	if (USART3->ISR & USART_ISR_TXE)
-	{
-        /*The user can clear the bit by implementing the callback function
-         * and tranfering new data in TDR Register.
-         */
-        usart_it_txe_callback(USART3);
-	}
-    else if (USART3->ISR & USART_ISR_TC)
+    if ((USART3->ISR & USART_ISR_PE) || (USART3->ISR & USART_CR3_EIE))
+    {
+        //The user should clear the bit of the error and handle it.
+        usart_it_err_callback(USART3);
+    }
+    if ((USART3->ISR & USART_ISR_IDLE))
     {
         //Clear interrupt then handle it.
-        USART3->ICR |= USART_ICR_TCCF;
-        usart_it_tc_callback(USART3);
+        USART3->ICR |= USART_ICR_IDLECF;
+        usart_it_idle_callback(USART3);
     }
-    else if (USART3->ISR & USART_ISR_RXNE)
+    if (USART3->ISR & USART_ISR_RXNE)
     {
         /*The user can clear the bit by implementing the callback function
          * and reading the data from the RDR Register.
          */
         usart_it_rxne_callback(USART3);
     }
-    else if ((USART3->ISR & USART_ISR_PE) || (USART3->ISR & USART_CR3_EIE))
-    {
-        //The user should clear the bit of the error and handle it.
-        usart_it_err_callback(USART3);
-    }
-    else if ((USART3->ISR & USART_ISR_IDLE))
+    if (USART3->ISR & USART_ISR_TXE)
+	{
+        /*The user can clear the bit by implementing the callback function
+         * and tranfering new data in TDR Register.
+         */
+        usart_it_txe_callback(USART3);
+	}
+    if (USART3->ISR & USART_ISR_TC)
     {
         //Clear interrupt then handle it.
-        USART3->ICR |= USART_ICR_IDLECF;
-        usart_it_idle_callback(USART3);
-    }    
+        USART3->ICR |= USART_ICR_TCCF;
+        usart_it_tc_callback(USART3);
+    }
 }
 
 void UART4_IRQHandler()
 {
+    if ((UART4->ISR & USART_ISR_PE) || (UART4->ISR & USART_CR3_EIE))
+    {
+        //The user should clear the bit of the error and handle it.
+        usart_it_err_callback(UART4);
+    }
+    if ((UART4->ISR & USART_ISR_IDLE))
+    {
+        //Clear interrupt then handle it.
+        UART4->ICR |= USART_ICR_IDLECF;
+        usart_it_idle_callback(UART4);
+    }
+    if (UART4->ISR & USART_ISR_RXNE)
+    {
+        /*The user can clear the bit by implementing the callback function
+         * and reading the data from the RDR Register.
+         */
+        usart_it_rxne_callback(UART4);
+    }
 	if (UART4->ISR & USART_ISR_TXE)
 	{
         /*The user can clear the bit by implementing the callback function
@@ -548,30 +539,12 @@ void UART4_IRQHandler()
          */
         usart_it_txe_callback(UART4);
 	}
-    else if (UART4->ISR & USART_ISR_TC)
+    if (UART4->ISR & USART_ISR_TC)
     {
         //Clear interrupt then handle it.
         UART4->ICR |= USART_ICR_TCCF;
         usart_it_tc_callback(UART4);
     }
-    else if (UART4->ISR & USART_ISR_RXNE)
-    {
-        /*The user can clear the bit by implementing the callback function
-         * and reading the data from the RDR Register.
-         */
-        usart_it_rxne_callback(UART4);
-    }
-    else if ((UART4->ISR & USART_ISR_PE) || (UART4->ISR & USART_CR3_EIE))
-    {
-        //The user should clear the bit of the error and handle it.
-        usart_it_err_callback(UART4);
-    }
-    else if ((UART4->ISR & USART_ISR_IDLE))
-    {
-        //Clear interrupt then handle it.
-        UART4->ICR |= USART_ICR_IDLECF;
-        usart_it_idle_callback(UART4);
-    }    
 }
 
 /**
@@ -607,13 +580,227 @@ __attribute__((weak)) void usart_it_err_callback(USART_TypeDef *usart)
 
 }
 
+static DMA_Channel_TypeDef *uart_dma_channel_sel(USART_TypeDef *usart, dma_type_sel type)
+{
+    if (usart == USART1)
+    {
+        if (type == DMA_TYPE_TRANSMIT)
+        {
+            if (!(DMA1_CSELR->CSELR & DMA_CSELR_C4S) || (!(((DMA1_CSELR->CSELR & DMA_CSELR_C4S)>>DMA_CSELR_C4S_Pos) == 0x2)))
+            {
+                return DMA1_Channel4;
+            }
+            else
+            {
+                return DMA2_Channel6;
+            }
+            
+        }
+        else if(type == DMA_TYPE_RECEIVE)
+        {
+            if (!(DMA1_CSELR->CSELR & DMA_CSELR_C5S) || (!(((DMA1_CSELR->CSELR & DMA_CSELR_C5S)>>DMA_CSELR_C5S_Pos) == 0x2)))
+            {
+                return DMA1_Channel5;
+            }
+            else
+            {
+                return DMA2_Channel7;
+            }
+        }
+    }
+    else if (usart == USART2)
+    {
+        if (type == DMA_TYPE_TRANSMIT)
+        {
+            return DMA1_Channel7;
+        }
+        else if(type == DMA_TYPE_RECEIVE)
+        {
+            return DMA1_Channel6;
+        }
+    }
+    else if (usart == USART3)
+    {
+        if (type == DMA_TYPE_TRANSMIT)
+        {
+            return DMA1_Channel2;
+        }
+        else if(type == DMA_TYPE_RECEIVE)
+        {
+            return DMA1_Channel3;
+        }      
+    }
+    else if (usart == UART4)
+    {
+        if (type == DMA_TYPE_TRANSMIT)
+        {
+            return DMA2_Channel3;
+        }
+        else if(type == DMA_TYPE_RECEIVE)
+        {
+            return DMA2_Channel6;
+        }
+    }
+    else
+    {
+        error_handler(__FILE__,__LINE__);
+    }
+    return 0;
+}
+
+
 /**
 *@todo 
 **/
-void uart_dma_conf(USART_TypeDef *usart, usart_clk_src clk_src, gpio_pin rx, gpio_pin tx, uint32_t baud_rate, usart_word_length word_length, usart_parity parity, usart_stop_bits stop_bits, usart_oversampling oversampling)
+void uart_dma_transmit_conf(USART_TypeDef *usart, uint8_t *data, uint16_t size, circular_mode circ_mode)
+{
+    DMA_Channel_TypeDef * uart_dma_channel = uart_dma_channel_sel(usart,DMA_TYPE_TRANSMIT);
+
+    //Enable the clock.
+    //If channels 5 and 4 are in use use dma2 for usart1
+    if (usart == UART4 || (usart==USART1 && (!(DMA1_CSELR->CSELR & DMA_CSELR_C4S) || !(((DMA1_CSELR->CSELR & DMA_CSELR_C4S)>>DMA_CSELR_C4S_Pos) == 0x2) )))
+    {
+        RCC->AHB1ENR |= RCC_AHB1ENR_DMA2EN;
+    }
+    else
+    {
+        RCC->AHB1ENR |= RCC_AHB1ENR_DMA1EN;
+    }
+    usart->CR3 |= USART_CR3_DMAT;
+    //Select request.
+    if (uart_dma_channel==DMA2_Channel3)
+    {   
+        DMA2_CSELR->CSELR &= ~(DMA_CSELR_C3S);
+        DMA2_CSELR->CSELR |= 0x02<<DMA_CSELR_C3S_Pos;
+        NVIC_SetPriority(DMA2_Channel3_IRQn,0);
+        NVIC_EnableIRQ(DMA2_Channel3_IRQn);
+    }
+    else if (uart_dma_channel==DMA2_Channel6)
+    {
+        DMA2_CSELR->CSELR &= ~(DMA_CSELR_C6S);
+        DMA2_CSELR->CSELR |= 0x02<<DMA_CSELR_C6S_Pos;
+    }
+    else if(uart_dma_channel==DMA1_Channel4)
+    {
+        DMA1_CSELR->CSELR &= ~(DMA_CSELR_C4S);
+        DMA1_CSELR->CSELR |= 0x02<<DMA_CSELR_C4S_Pos;
+    }
+    else if(uart_dma_channel==DMA1_Channel7)
+    {
+        DMA1_CSELR->CSELR &= ~(DMA_CSELR_C7S);
+        DMA1_CSELR->CSELR |= 0x02<<DMA_CSELR_C7S_Pos;
+        NVIC_SetPriority(DMA2_Channel7_IRQn,0);
+        NVIC_EnableIRQ(DMA2_Channel7_IRQn);
+    }
+    else if(uart_dma_channel==DMA1_Channel2)
+    {
+        DMA1_CSELR->CSELR &= ~(DMA_CSELR_C2S);
+        DMA1_CSELR->CSELR |= 0x02<<DMA_CSELR_C2S_Pos;
+    }
+    //Set the cpar register.
+    uart_dma_channel->CPAR = (uint32_t)&usart;
+    //Set the CMAR register.
+    uart_dma_channel->CMAR = (uint32_t)&data;
+    uart_dma_channel->CNDTR = size;
+    //Enable memory increment mode
+    uart_dma_channel->CCR &= ~(DMA_CCR_MINC);
+    uart_dma_channel->CCR |= DMA_CCR_MINC;
+    //Select circular mode
+    uart_dma_channel->CCR &= ~(DMA_CCR_CIRC);
+    uart_dma_channel->CCR |= circ_mode<<DMA_CCR_CIRC_Pos;
+    //Select transmit direction
+    uart_dma_channel->CCR &= ~(DMA_CCR_DIR);
+    uart_dma_channel->CCR |= DMA_CCR_DIR;
+    //Enable interrupts
+    uart_dma_channel->CCR &= ~(DMA_CCR_TEIE | DMA_CCR_HTIE | DMA_CCR_TCIE);
+    uart_dma_channel->CCR |= (DMA_CCR_TEIE | DMA_CCR_HTIE | DMA_CCR_TCIE);
+    //Enable transfer DMA.
+    uart_dma_channel->CCR |= (DMA_CCR_EN);
+    
+}
+
+/**
+*@todo 
+**/
+void uart_dma_receive_conf(USART_TypeDef *usart)
+{
+    if (usart == UART4)
+    {
+        RCC->AHB1ENR |= RCC_AHB1ENR_DMA2EN;
+    }
+    else
+    {
+        RCC->AHB1ENR |= RCC_AHB1ENR_DMA1EN;
+    }
+}
+
+void DMA1_Channel1_IRQHandler()
 {
 
 }
+
+void DMA1_Channel2_IRQHandler()
+{
+
+}
+
+void DMA1_Channel3_IRQHandler()
+{
+
+}
+
+void DMA1_Channel4_IRQHandler()
+{
+
+}
+
+void DMA1_Channel5_IRQHandler()
+{
+
+}
+
+void DMA1_Channel6_IRQHandler()
+{
+
+}
+
+void DMA1_Channel7_IRQHandler()
+{
+    if (DMA1->ISR & DMA_ISR_TEIF7)
+    {
+
+    }
+    else if (DMA1->ISR & DMA_ISR_HTIF7)
+    {
+
+    }
+    else if (DMA1->ISR & DMA_ISR_TCIF7)
+    {
+        
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 /**
@@ -623,3 +810,5 @@ void uart_hf_duplex_conf(USART_TypeDef *usart, usart_clk_src clk_src, gpio_pin r
 {
 
 }
+
+

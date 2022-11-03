@@ -54,16 +54,6 @@ void sys_ms_delay(uint32_t timeout)
     while(sys_get_systick()-start<timeout);
 }
 
-
-__attribute__((weak)) void error_handler(void)
-{
-  while (1)
-  {
-
-  }
-
-}
-
 /**
  * @brief Increments the tick counter after every interrupt 
  *        which happens every ms.
@@ -71,4 +61,52 @@ __attribute__((weak)) void error_handler(void)
  */
 void SysTick_Handler(void)  {
   ms_tick_counter++;
+}
+
+
+
+/**
+ * @brief Overwrite the weak function _write found in syscalls.c 
+ *        to enable printf on nucleo stm32l452re.
+ * 
+ * @note to use printf usart2 needs to be enabled first on pins PA2 and PA3, stdio.h should be 
+ *       included.
+ * 
+ */
+#ifdef DEBUG
+int _write(int file, char *ptr, int len) {
+
+    if ((USART2->CR1 & USART_CR1_UE))
+    {
+        for (uint32_t i=0;i<len;i++)
+        {
+
+            uint32_t start = sys_get_systick();
+            while (!(USART2->ISR & USART_ISR_TXE))
+            {
+                if (sys_get_systick()-start>500)
+                {
+                    return -1;
+                }
+            }
+            USART2->TDR = *ptr;
+            ptr++;        
+        } 
+        return len;
+    }
+  return 0;
+}
+#endif
+
+__attribute__((weak)) void error_handler(char* f,uint32_t l)
+{
+  #ifdef DEBUG
+
+  if ((USART2->CR1 & USART_CR1_UE))
+  {
+    printf("Error on: %s in line: %ld",f,l);
+  }
+  #endif
+
+//__ASM volatile("BKPT");
 }

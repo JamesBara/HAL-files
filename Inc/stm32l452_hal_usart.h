@@ -54,6 +54,19 @@ typedef enum
     IDLE_LINE_IT_EN = 0x01 ///< Enable interrupts for Idle line detected
 }idle_it;
 
+typedef enum
+{
+    DMA_TYPE_TRANSMIT = 0x00,
+    DMA_TYPE_RECEIVE = 0x01
+}dma_type_sel;
+
+typedef enum
+{
+    CIRCULAR_MODE_DIS = 0x00,
+    CIRCULAR_MODE_EN = 0x01
+}circular_mode;
+
+
 void uart_conf(USART_TypeDef *usart, usart_clk_src clk_src, gpio_pin rx, gpio_pin tx, uint32_t baud_rate, usart_word_length word_length, usart_parity parity, usart_stop_bits stop_bits, usart_oversampling oversampling);
 
 uint8_t uart_received_data(USART_TypeDef *usart, uint8_t *data, uint32_t size, uint32_t timeout);

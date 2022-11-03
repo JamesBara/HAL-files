@@ -239,7 +239,7 @@ gpio_pin_state gpio_read(gpio_pin pin)
 	gpio_pin_num num = gpio_parse_pin_num(pin);
 	if (((gpio->MODER & (0x03<<(num*0x02)))!= INPUT<<(num*0x02)))
 	{
-		error_handler();
+		error_handler(__FILE__,__LINE__);
 	}
 	if (!(gpio->IDR & 0x01<<num))
 	{
@@ -269,7 +269,7 @@ void gpio_write(gpio_pin pin, gpio_pin_state state)
 
 	if (((gpio->MODER & (0x03<<(num*0x02)))!= OUTPUT<<(num*0x02)))
 	{
-		error_handler();
+		error_handler(__FILE__,__LINE__);
 	}
 
 	if (state == STATE_LOW)
@@ -297,7 +297,7 @@ void gpio_toggle(gpio_pin pin)
 
 	if (((gpio->MODER & (0x03<<(num*0x02)))!= OUTPUT<<(num*0x02)))
 	{
-		error_handler();
+		error_handler(__FILE__,__LINE__);
 	}
 	if (!(gpio->ODR & 0x01<<num))
 	{
