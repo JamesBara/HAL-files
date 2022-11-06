@@ -122,6 +122,7 @@ static uint8_t uart_gpio_init(USART_TypeDef *usart, gpio_pin rx, gpio_pin tx)
  * @brief Configure the uart.
  * 
  * @note This function only enable asynchronous blocking communication.
+ * @note Enabling transmit sends an idle line dummy byte that the receiver needs to handle.
  * 
  * @todo Maybe add auto baud rate?
  * @todo add 9 bit word method.
