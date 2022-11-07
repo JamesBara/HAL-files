@@ -232,15 +232,15 @@ void uart_conf(USART_TypeDef *usart, usart_clk_src clk_src, gpio_pin rx, gpio_pi
     //Set stop bits.
     usart->CR2 &= ~(USART_CR2_STOP);
     usart->CR2 |= (stop_bits<<USART_CR2_STOP_Pos);
-    //Enable Receiver.
-    usart->CR1 |= USART_CR1_RE;
-    //Enable Transmiter
-    usart->CR1 |= USART_CR1_TE;
+    //Enable Receiver & Transmiter.
+    usart->CR1 |= (USART_CR1_RE | USART_CR1_TE);
     //Set oversampling.
     usart->CR1 &= ~(USART_CR1_OVER8);
     usart->CR1 |= (oversampling<<USART_CR1_OVER8_Pos);
     //Enable uart.
     usart->CR1 |=  USART_CR1_UE;
+    //Enabling TE sends a idle byte. Force send it and let receiver handle it.
+    usart->TDR;
 }
 
 /**
@@ -581,84 +581,14 @@ __attribute__((weak)) void usart_it_err_callback(USART_TypeDef *usart)
 
 }
 
-static DMA_Channel_TypeDef *uart_dma_channel_sel(USART_TypeDef *usart, dma_type_sel type)
-{
-    if (usart == USART1)
-    {
-        if (type == DMA_TYPE_TRANSMIT)
-        {
-            if (!(DMA1_CSELR->CSELR & DMA_CSELR_C4S) || (!(((DMA1_CSELR->CSELR & DMA_CSELR_C4S)>>DMA_CSELR_C4S_Pos) == 0x2)))
-            {
-                return DMA1_Channel4;
-            }
-            else
-            {
-                return DMA2_Channel6;
-            }
-            
-        }
-        else if(type == DMA_TYPE_RECEIVE)
-        {
-            if (!(DMA1_CSELR->CSELR & DMA_CSELR_C5S) || (!(((DMA1_CSELR->CSELR & DMA_CSELR_C5S)>>DMA_CSELR_C5S_Pos) == 0x2)))
-            {
-                return DMA1_Channel5;
-            }
-            else
-            {
-                return DMA2_Channel7;
-            }
-        }
-    }
-    else if (usart == USART2)
-    {
-        if (type == DMA_TYPE_TRANSMIT)
-        {
-            return DMA1_Channel7;
-        }
-        else if(type == DMA_TYPE_RECEIVE)
-        {
-            return DMA1_Channel6;
-        }
-    }
-    else if (usart == USART3)
-    {
-        if (type == DMA_TYPE_TRANSMIT)
-        {
-            return DMA1_Channel2;
-        }
-        else if(type == DMA_TYPE_RECEIVE)
-        {
-            return DMA1_Channel3;
-        }      
-    }
-    else if (usart == UART4)
-    {
-        if (type == DMA_TYPE_TRANSMIT)
-        {
-            return DMA2_Channel3;
-        }
-        else if(type == DMA_TYPE_RECEIVE)
-        {
-            return DMA2_Channel6;
-        }
-    }
-    else
-    {
-        error_handler(__FILE__,__LINE__);
-    }
-    return 0;
-}
-
-
 /**
 *@todo 
 **/
-void uart_dma_transmit_conf(USART_TypeDef *usart, uint8_t *data, uint16_t size, circular_mode circ_mode)
+void uart_dma_transmit_conf(USART_TypeDef *usart, uint8_t *data, uint16_t size, circular_mode circ_mode, uint32_t priority)
 {
-    DMA_Channel_TypeDef * uart_dma_channel = uart_dma_channel_sel(usart,DMA_TYPE_TRANSMIT);
-
+    DMA_Channel_TypeDef *uart_dma_channel;
     //Enable the clock.
-    //If channels 5 and 4 are in use use dma2 for usart1
+    //If channels 4 is in use use dma2 for usart1
     if (usart == UART4 || (usart==USART1 && (!(DMA1_CSELR->CSELR & DMA_CSELR_C4S) || !(((DMA1_CSELR->CSELR & DMA_CSELR_C4S)>>DMA_CSELR_C4S_Pos) == 0x2) )))
     {
         RCC->AHB1ENR |= RCC_AHB1ENR_DMA2EN;
@@ -667,41 +597,63 @@ void uart_dma_transmit_conf(USART_TypeDef *usart, uint8_t *data, uint16_t size, 
     {
         RCC->AHB1ENR |= RCC_AHB1ENR_DMA1EN;
     }
-    usart->CR3 |= USART_CR3_DMAT;
-    //Select request.
-    if (uart_dma_channel==DMA2_Channel3)
-    {   
-        DMA2_CSELR->CSELR &= ~(DMA_CSELR_C3S);
-        DMA2_CSELR->CSELR |= 0x02<<DMA_CSELR_C3S_Pos;
-        NVIC_SetPriority(DMA2_Channel3_IRQn,0);
-        NVIC_EnableIRQ(DMA2_Channel3_IRQn);
-    }
-    else if (uart_dma_channel==DMA2_Channel6)
+    if (usart == USART1)
     {
-        DMA2_CSELR->CSELR &= ~(DMA_CSELR_C6S);
-        DMA2_CSELR->CSELR |= 0x02<<DMA_CSELR_C6S_Pos;
+        if (!(DMA1_CSELR->CSELR & DMA_CSELR_C4S) || (!(((DMA1_CSELR->CSELR & DMA_CSELR_C4S)>>DMA_CSELR_C4S_Pos) == 0x2)))
+        {
+            uart_dma_channel=DMA1_Channel4;
+            DMA1_CSELR->CSELR &= ~(DMA_CSELR_C4S);
+            DMA1_CSELR->CSELR |= 0x02<<DMA_CSELR_C4S_Pos;
+            NVIC_SetPriority(DMA1_Channel4_IRQn,priority);
+            NVIC_EnableIRQ(DMA1_Channel4_IRQn);
+        }
+        else
+        {
+            uart_dma_channel=DMA2_Channel6;
+            DMA2_CSELR->CSELR &= ~(DMA_CSELR_C6S);
+            DMA2_CSELR->CSELR |= (0x02<<DMA_CSELR_C6S_Pos);
+            NVIC_SetPriority(DMA2_Channel6_IRQn,priority);
+            NVIC_EnableIRQ(DMA2_Channel6_IRQn);
+        }
     }
-    else if(uart_dma_channel==DMA1_Channel4)
+    else if (usart == USART2)
     {
-        DMA1_CSELR->CSELR &= ~(DMA_CSELR_C4S);
-        DMA1_CSELR->CSELR |= 0x02<<DMA_CSELR_C4S_Pos;
-    }
-    else if(uart_dma_channel==DMA1_Channel7)
-    {
+        uart_dma_channel=DMA1_Channel7;
         DMA1_CSELR->CSELR &= ~(DMA_CSELR_C7S);
         DMA1_CSELR->CSELR |= 0x02<<DMA_CSELR_C7S_Pos;
-        NVIC_SetPriority(DMA2_Channel7_IRQn,0);
-        NVIC_EnableIRQ(DMA2_Channel7_IRQn);
+        NVIC_SetPriority(DMA1_Channel7_IRQn,priority);
+        NVIC_EnableIRQ(DMA1_Channel7_IRQn);
     }
-    else if(uart_dma_channel==DMA1_Channel2)
+    else if (usart == USART3)
     {
+        uart_dma_channel=DMA1_Channel2;
         DMA1_CSELR->CSELR &= ~(DMA_CSELR_C2S);
         DMA1_CSELR->CSELR |= 0x02<<DMA_CSELR_C2S_Pos;
+        NVIC_SetPriority(DMA1_Channel2_IRQn,priority);
+        NVIC_EnableIRQ(DMA1_Channel2_IRQn);
+
     }
+    else if (usart == UART4)
+    {
+        uart_dma_channel=DMA2_Channel3;
+        DMA2_CSELR->CSELR &= ~(DMA_CSELR_C3S);
+        DMA2_CSELR->CSELR |= (0x02<<DMA_CSELR_C3S_Pos);
+        NVIC_SetPriority(DMA2_Channel3_IRQn,priority);
+        NVIC_EnableIRQ(DMA2_Channel3_IRQn);
+    }
+    else
+    {
+        error_handler(__FILE__,__LINE__);
+    }
+    //Set the registers.
+    //Enable DMA Transfers in usart
+    usart->CR3 |= USART_CR3_DMAT;
+    //Disable DMA transfers
+    uart_dma_channel->CCR &= ~(DMA_CCR_EN);
     //Set the cpar register.
-    uart_dma_channel->CPAR = (uint32_t)&usart;
+    uart_dma_channel->CPAR = (uint32_t)&(usart->TDR);
     //Set the CMAR register.
-    uart_dma_channel->CMAR = (uint32_t)&data;
+    uart_dma_channel->CMAR = (uint32_t)data;
     uart_dma_channel->CNDTR = size;
     //Enable memory increment mode
     uart_dma_channel->CCR &= ~(DMA_CCR_MINC);
@@ -715,17 +667,145 @@ void uart_dma_transmit_conf(USART_TypeDef *usart, uint8_t *data, uint16_t size, 
     //Enable interrupts
     uart_dma_channel->CCR &= ~(DMA_CCR_TEIE | DMA_CCR_HTIE | DMA_CCR_TCIE);
     uart_dma_channel->CCR |= (DMA_CCR_TEIE | DMA_CCR_HTIE | DMA_CCR_TCIE);
+    //Clear TC
+    usart->ICR |= USART_ICR_TCCF;
     //Enable transfer DMA.
-    uart_dma_channel->CCR |= (DMA_CCR_EN);
-    
+    uart_dma_channel->CCR |= (DMA_CCR_EN);    
 }
+
+void DMA1_Channel2_IRQHandler()
+{
+    if (DMA1->ISR & DMA_ISR_TEIF2)
+    {
+        //Clear the error and handle it.
+        DMA1->IFCR |= DMA_IFCR_CTEIF2;
+    	usart_dma_tx_err_callback(USART3);
+    }
+    if (DMA1->ISR & DMA_ISR_TCIF2)
+    {   //Clear the flag and handle the completion.
+        DMA1->IFCR |= DMA_IFCR_CTCIF2;
+    	usart_dma_tx_cmplt_callback(USART3);
+    }
+    if (DMA1->ISR & DMA_ISR_HTIF2)
+    {
+        //Clear the flag and handle the half completion.
+        DMA1->IFCR |= DMA_IFCR_CHTIF2;
+    	usart_dma_tx_hf_callback(USART3);
+    }
+}
+
+void DMA1_Channel4_IRQHandler()
+{
+    if (DMA1->ISR & DMA_ISR_TEIF4)
+    {
+        //Clear the error and handle it.
+        DMA1->IFCR |= DMA_IFCR_CTEIF4;
+    	usart_dma_tx_err_callback(USART1);
+    }
+    if (DMA1->ISR & DMA_ISR_TCIF4)
+    {   //Clear the flag and handle the completion.
+        DMA1->IFCR |= DMA_IFCR_CTCIF4;
+    	usart_dma_tx_cmplt_callback(USART1);
+    }
+    if (DMA1->ISR & DMA_ISR_HTIF4)
+    {
+        //Clear the flag and handle the half completion.
+        DMA1->IFCR |= DMA_IFCR_CHTIF4;
+    	usart_dma_tx_hf_callback(USART1);
+    }
+}
+
+void DMA1_Channel7_IRQHandler()
+{
+    if (DMA1->ISR & DMA_ISR_TEIF7)
+    {
+        //Clear the error and handle it.
+        DMA1->IFCR |= DMA_IFCR_CTEIF7;
+    	usart_dma_tx_err_callback(USART2);
+    }
+    if (DMA1->ISR & DMA_ISR_TCIF7)
+    {   //Clear the flag and handle the completion.
+        DMA1->IFCR |= DMA_IFCR_CTCIF7;
+    	usart_dma_tx_cmplt_callback(USART2);
+    }
+    if (DMA1->ISR & DMA_ISR_HTIF7)
+    {
+        //Clear the flag and handle the half completion.
+        DMA1->IFCR |= DMA_IFCR_CHTIF7;
+    	usart_dma_tx_hf_callback(USART2);
+    }
+}
+
+void DMA2_Channel3_IRQHandler()
+{
+    if (DMA2->ISR & DMA_ISR_TEIF3)
+    {
+        //Clear the error and handle it.
+        DMA2->IFCR |= DMA_IFCR_CTEIF3;
+    	usart_dma_tx_err_callback(UART4);
+    }
+    if (DMA2->ISR & DMA_ISR_TCIF3)
+    {   //Clear the flag and handle the completion.
+        DMA2->IFCR |= DMA_IFCR_CTCIF3;
+    	usart_dma_tx_cmplt_callback(UART4);
+    }
+    if (DMA2->ISR & DMA_ISR_HTIF3)
+    {
+        //Clear the flag and handle the half completion.
+        DMA2->IFCR |= DMA_IFCR_CHTIF3;
+    	usart_dma_tx_hf_callback(UART4);
+    }
+}
+
+void DMA2_Channel6_IRQHandler()
+{
+    if (DMA2->ISR & DMA_ISR_TEIF6)
+    {
+        //Clear the error and handle it.
+        DMA2->IFCR |= DMA_IFCR_CTEIF6;
+    	usart_dma_tx_err_callback(USART1);
+    }
+    if (DMA2->ISR & DMA_ISR_TCIF6)
+    {   //Clear the flag and handle the completion.
+        DMA2->IFCR |= DMA_IFCR_CTCIF6;
+    	usart_dma_tx_cmplt_callback(USART1);
+    }
+    if (DMA2->ISR & DMA_ISR_HTIF6)
+    {
+        //Clear the flag and handle the half completion.
+        DMA2->IFCR |= DMA_IFCR_CHTIF6;
+    	usart_dma_tx_hf_callback(USART1);
+    }
+}
+
+__attribute__((weak)) void usart_dma_tx_hf_callback(USART_TypeDef *usart)
+{
+
+
+}
+__attribute__((weak)) void usart_dma_tx_cmplt_callback(USART_TypeDef *usart)
+{
+
+
+}
+
+__attribute__((weak)) void usart_dma_tx_err_callback(USART_TypeDef *usart)
+{
+
+
+}
+
+
 
 /**
 *@todo 
 **/
-void uart_dma_receive_conf(USART_TypeDef *usart)
+void uart_dma_receive_conf(USART_TypeDef *usart, uint8_t *data, uint16_t size, circular_mode circ_mode, uint32_t priority)
 {
-    if (usart == UART4)
+    DMA_Channel_TypeDef *uart_dma_channel;
+    //Enable the clock.
+    //If channels 5 is in use use dma2 for usart1
+    if (usart == UART4 || (usart==USART1 && (!(DMA1_CSELR->CSELR & DMA_CSELR_C5S) || !(((DMA1_CSELR->CSELR & DMA_CSELR_C5S)>>DMA_CSELR_C5S_Pos) == 0x2) )))
     {
         RCC->AHB1ENR |= RCC_AHB1ENR_DMA2EN;
     }
@@ -733,75 +813,201 @@ void uart_dma_receive_conf(USART_TypeDef *usart)
     {
         RCC->AHB1ENR |= RCC_AHB1ENR_DMA1EN;
     }
+    if (usart == USART1)
+    {
+        if (!(DMA1_CSELR->CSELR & DMA_CSELR_C5S) || (!(((DMA1_CSELR->CSELR & DMA_CSELR_C5S)>>DMA_CSELR_C5S_Pos) == 0x2)))
+        {
+            uart_dma_channel=DMA1_Channel5;
+            DMA1_CSELR->CSELR &= ~(DMA_CSELR_C5S);
+            DMA1_CSELR->CSELR |= 0x02<<DMA_CSELR_C5S_Pos;
+            NVIC_SetPriority(DMA1_Channel5_IRQn,priority);
+            NVIC_EnableIRQ(DMA1_Channel5_IRQn);
+        }
+        else
+        {
+            uart_dma_channel=DMA2_Channel7;
+            DMA2_CSELR->CSELR &= ~(DMA_CSELR_C7S);
+            DMA2_CSELR->CSELR |= (0x02<<DMA_CSELR_C7S_Pos);
+            NVIC_SetPriority(DMA2_Channel7_IRQn,priority);
+            NVIC_EnableIRQ(DMA2_Channel7_IRQn);
+        }
+    }
+    else if (usart == USART2)
+    {
+        uart_dma_channel=DMA1_Channel6;
+        DMA1_CSELR->CSELR &= ~(DMA_CSELR_C6S);
+        DMA1_CSELR->CSELR |= 0x02<<DMA_CSELR_C6S_Pos;
+        NVIC_SetPriority(DMA1_Channel6_IRQn,priority);
+        NVIC_EnableIRQ(DMA1_Channel6_IRQn);
+    }
+    else if (usart == USART3)
+    {
+        uart_dma_channel=DMA1_Channel3;
+        DMA1_CSELR->CSELR &= ~(DMA_CSELR_C3S);
+        DMA1_CSELR->CSELR |= 0x02<<DMA_CSELR_C3S_Pos;
+        NVIC_SetPriority(DMA1_Channel3_IRQn,priority);
+        NVIC_EnableIRQ(DMA1_Channel3_IRQn);
+
+    }
+    else if (usart == UART4)
+    {
+        uart_dma_channel=DMA2_Channel5;
+        DMA2_CSELR->CSELR &= ~(DMA_CSELR_C5S);
+        DMA2_CSELR->CSELR |= (0x02<<DMA_CSELR_C5S_Pos);
+        NVIC_SetPriority(DMA2_Channel5_IRQn,priority);
+        NVIC_EnableIRQ(DMA2_Channel5_IRQn);
+    }
+    else
+    {
+        error_handler(__FILE__,__LINE__);
+    }
+    //Set the registers.
+    //Enanble DMA Receives in usart.
+    usart->CR3 |= USART_CR3_DMAR;
+    //Disable DMA transfers
+    uart_dma_channel->CCR &= ~(DMA_CCR_EN);
+    //Set the cpar register.
+    uart_dma_channel->CPAR = (uint32_t)&(usart->RDR);
+    //Set the CMAR register.
+    uart_dma_channel->CMAR = (uint32_t)data;
+    uart_dma_channel->CNDTR = size;
+    //Enable memory increment mode
+    uart_dma_channel->CCR &= ~(DMA_CCR_MINC);
+    uart_dma_channel->CCR |= DMA_CCR_MINC;
+    //Select circular mode
+    uart_dma_channel->CCR &= ~(DMA_CCR_CIRC);
+    uart_dma_channel->CCR |= circ_mode<<DMA_CCR_CIRC_Pos;
+    //Select receive direction
+    uart_dma_channel->CCR &= ~(DMA_CCR_DIR);
+    //Enable interrupts
+    uart_dma_channel->CCR &= ~(DMA_CCR_TEIE | DMA_CCR_HTIE | DMA_CCR_TCIE);
+    uart_dma_channel->CCR |= (DMA_CCR_TEIE | DMA_CCR_HTIE | DMA_CCR_TCIE);
+    //Enable transfer DMA.
+    uart_dma_channel->CCR |= (DMA_CCR_EN);   
 }
 
-void DMA1_Channel1_IRQHandler()
-{
-
-}
-
-void DMA1_Channel2_IRQHandler()
-{
-
-}
 
 void DMA1_Channel3_IRQHandler()
 {
-
-}
-
-void DMA1_Channel4_IRQHandler()
-{
-
+    if (DMA1->ISR & DMA_ISR_TEIF3)
+    {
+        //Clear the error and handle it.
+        DMA1->IFCR |= DMA_IFCR_CTEIF3;
+    	usart_dma_rx_err_callback(USART3);
+    }
+    if (DMA1->ISR & DMA_ISR_TCIF3)
+    {   //Clear the flag and handle the completion.
+        DMA1->IFCR |= DMA_IFCR_CTCIF3;
+    	usart_dma_rx_cmplt_callback(USART3);
+    }
+    if (DMA1->ISR & DMA_ISR_HTIF3)
+    {
+        //Clear the flag and handle the half completion.
+        DMA1->IFCR |= DMA_IFCR_CHTIF3;
+    	usart_dma_rx_hf_callback(USART3);
+    }
 }
 
 void DMA1_Channel5_IRQHandler()
 {
-
+    if (DMA1->ISR & DMA_ISR_TEIF5)
+    {
+        //Clear the error and handle it.
+        DMA1->IFCR |= DMA_IFCR_CTEIF5;
+    	usart_dma_rx_err_callback(USART1);
+    }
+    if (DMA1->ISR & DMA_ISR_TCIF5)
+    {   //Clear the flag and handle the completion.
+        DMA1->IFCR |= DMA_IFCR_CTCIF5;
+    	usart_dma_rx_cmplt_callback(USART1);
+    }
+    if (DMA1->ISR & DMA_ISR_HTIF5)
+    {
+        //Clear the flag and handle the half completion.
+        DMA1->IFCR |= DMA_IFCR_CHTIF5;
+    	usart_dma_rx_hf_callback(USART1);
+    }
 }
 
 void DMA1_Channel6_IRQHandler()
 {
-
+    if (DMA1->ISR & DMA_ISR_TEIF6)
+    {
+        //Clear the error and handle it.
+        DMA1->IFCR |= DMA_IFCR_CTEIF6;
+    	usart_dma_rx_err_callback(USART2);
+    }
+    if (DMA1->ISR & DMA_ISR_TCIF6)
+    {   //Clear the flag and handle the completion.
+        DMA1->IFCR |= DMA_IFCR_CTCIF6;
+    	usart_dma_rx_cmplt_callback(USART2);
+    }
+    if (DMA1->ISR & DMA_ISR_HTIF6)
+    {
+        //Clear the flag and handle the half completion.
+        DMA1->IFCR |= DMA_IFCR_CHTIF6;
+    	usart_dma_rx_hf_callback(USART2);
+    }
 }
 
-void DMA1_Channel7_IRQHandler()
+void DMA2_Channel5_IRQHandler()
 {
-    if (DMA1->ISR & DMA_ISR_TEIF7)
+    if (DMA2->ISR & DMA_ISR_TEIF5)
     {
-
+        //Clear the error and handle it.
+        DMA2->IFCR |= DMA_IFCR_CTEIF5;
+    	usart_dma_rx_err_callback(UART4);
     }
-    else if (DMA1->ISR & DMA_ISR_HTIF7)
-    {
-
+    if (DMA2->ISR & DMA_ISR_TCIF5)
+    {   //Clear the flag and handle the completion.
+        DMA2->IFCR |= DMA_IFCR_CTCIF5;
+    	usart_dma_rx_cmplt_callback(UART4);
     }
-    else if (DMA1->ISR & DMA_ISR_TCIF7)
+    if (DMA2->ISR & DMA_ISR_HTIF5)
     {
-        
+        //Clear the flag and handle the half completion.
+        DMA2->IFCR |= DMA_IFCR_CHTIF5;
+    	usart_dma_rx_hf_callback(UART4);
     }
 }
 
+void DMA2_Channel7_IRQHandler()
+{
+    if (DMA2->ISR & DMA_ISR_TEIF7)
+    {
+        //Clear the error and handle it.
+        DMA2->IFCR |= DMA_IFCR_CTEIF7;
+    	usart_dma_rx_err_callback(USART1);
+    }
+    if (DMA2->ISR & DMA_ISR_TCIF7)
+    {   //Clear the flag and handle the completion.
+        DMA2->IFCR |= DMA_IFCR_CTCIF7;
+    	usart_dma_rx_cmplt_callback(USART1);
+    }
+    if (DMA2->ISR & DMA_ISR_HTIF3)
+    {
+        //Clear the flag and handle the half completion.
+        DMA2->IFCR |= DMA_IFCR_CHTIF7;
+    	usart_dma_rx_hf_callback(USART1);
+    }
+}
+
+__attribute__((weak)) void usart_dma_rx_hf_callback(USART_TypeDef *usart)
+{
 
 
+}
+__attribute__((weak)) void usart_dma_rx_cmplt_callback(USART_TypeDef *usart)
+{
 
 
+}
+
+__attribute__((weak)) void usart_dma_rx_err_callback(USART_TypeDef *usart)
+{
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+}
 
 
 /**

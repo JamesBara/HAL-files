@@ -476,15 +476,15 @@ void clock_pll_conf(pll_clk_src clk_src,uint32_t sysclk_freq,uint32_t pll48m1clk
                 uint32_t temp_pllp_freq = 0;
                 if(sysclk_freq)
                 {
-                	uint32_t temp_sysclk_freq = (src_freq/pllm)*plln_reg_val/((pllr_reg_val+1)*2);
+                	temp_sysclk_freq = (src_freq/pllm)*plln_reg_val/((pllr_reg_val+1)*2);
                 }
                 if (pll48m1clk_freq)
                 {
-                	uint32_t temp_pll48m1clk_freq = (src_freq/pllm)*plln_reg_val/((pllq_reg_val+1)*2);
+                	temp_pll48m1clk_freq = (src_freq/pllm)*plln_reg_val/((pllq_reg_val+1)*2);
                 }
                 if (pllp_freq)
                 {
-                	uint32_t temp_pllp_freq = (src_freq/pllm)*plln_reg_val/pllp_reg_val;
+                	temp_pllp_freq = (src_freq/pllm)*plln_reg_val/pllp_reg_val;
                 }
                 if (temp_sai_vco>=64000000 && temp_sai_vco<=344000000)
                 {

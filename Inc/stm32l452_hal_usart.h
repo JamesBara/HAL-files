@@ -56,12 +56,6 @@ typedef enum
 
 typedef enum
 {
-    DMA_TYPE_TRANSMIT = 0x00,
-    DMA_TYPE_RECEIVE = 0x01
-}dma_type_sel;
-
-typedef enum
-{
     CIRCULAR_MODE_DIS = 0x00,
     CIRCULAR_MODE_EN = 0x01
 }circular_mode;
@@ -78,9 +72,17 @@ void usart_it_rxne_callback(USART_TypeDef *usart);
 void usart_it_idle_callback(USART_TypeDef *usart);
 void usart_it_err_callback(USART_TypeDef *usart);
 
+void uart_dma_transmit_conf(USART_TypeDef *usart, uint8_t *data, uint16_t size, circular_mode circ_mode, uint32_t priority);
+void uart_dma_receive_conf(USART_TypeDef *usart, uint8_t *data, uint16_t size, circular_mode circ_mode, uint32_t priority);
 
 
+void usart_dma_tx_hf_callback(USART_TypeDef *usart);
+void usart_dma_tx_cmplt_callback(USART_TypeDef *usart);
+void usart_dma_tx_err_callback(USART_TypeDef *usart);
 
+void usart_dma_rx_hf_callback(USART_TypeDef *usart);
+void usart_dma_rx_cmplt_callback(USART_TypeDef *usart);
+void usart_dma_rx_err_callback(USART_TypeDef *usart);
 
 #ifdef __cplusplus
 }
