@@ -2,6 +2,7 @@
 #define STM32L452_HAL_CLOCK_H
 
 #include "stm32l452_hal_sys.h"
+#include "stm32l452_hal_dbg.h"
 
 #ifdef __cplusplus
 extern "C" {

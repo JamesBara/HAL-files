@@ -4,6 +4,7 @@
 #include "stm32l452_hal_sys.h"
 #include "stm32l452_hal_gpio.h"
 #include "stm32l452_hal_clock.h"
+#include "stm32l452_hal_dbg.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -83,6 +84,13 @@ void usart_dma_tx_err_callback(USART_TypeDef *usart);
 void usart_dma_rx_hf_callback(USART_TypeDef *usart);
 void usart_dma_rx_cmplt_callback(USART_TypeDef *usart);
 void usart_dma_rx_err_callback(USART_TypeDef *usart);
+
+
+#ifdef DEBUG_UART
+uint8_t uart_transmit_byte(uint8_t ch);
+#endif
+
+
 
 #ifdef __cplusplus
 }

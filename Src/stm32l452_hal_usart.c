@@ -549,7 +549,7 @@ void UART4_IRQHandler()
 }
 
 /**
- * @brief Callback function can be overwritten by the user.
+ * @brief Callback functions can be overwritten by the user.
  * 
  */
 __attribute__((weak)) void usart_it_tc_callback(USART_TypeDef *usart)
@@ -582,8 +582,20 @@ __attribute__((weak)) void usart_it_err_callback(USART_TypeDef *usart)
 }
 
 /**
-*@todo 
-**/
+ * @brief Configures the dma for uart transmitions.
+ * 
+ * @param usart This parameter allows the choice between different USART peripherals and can be of value:
+ *              USART1
+ *              USART2
+ *              USART3
+ *              UART4
+ * @param data This parameter corresponds to the buffer.
+ * @param size This parameter is the size of the buffer or the amount of data the dma should send before stopping.
+ * @param circ_mode This parameter can be of value:
+ *                  CIRCULAR_MODE_DIS,
+ *                  CIRCULAR_MODE_EN
+ * @param priority This parameter sets the priority of the interrupt and can be 1-15.
+ */
 void uart_dma_transmit_conf(USART_TypeDef *usart, uint8_t *data, uint16_t size, circular_mode circ_mode, uint32_t priority)
 {
     DMA_Channel_TypeDef *uart_dma_channel;
@@ -673,6 +685,9 @@ void uart_dma_transmit_conf(USART_TypeDef *usart, uint8_t *data, uint16_t size, 
     uart_dma_channel->CCR |= (DMA_CCR_EN);    
 }
 
+/************************************************
+ *  DMA handlers.
+ ***********************************************/
 void DMA1_Channel2_IRQHandler()
 {
     if (DMA1->ISR & DMA_ISR_TEIF2)
@@ -778,6 +793,10 @@ void DMA2_Channel6_IRQHandler()
     }
 }
 
+/**
+ * @brief Callback functions can be overwritten by the user.
+ * 
+ */
 __attribute__((weak)) void usart_dma_tx_hf_callback(USART_TypeDef *usart)
 {
 
@@ -886,7 +905,9 @@ void uart_dma_receive_conf(USART_TypeDef *usart, uint8_t *data, uint16_t size, c
     uart_dma_channel->CCR |= (DMA_CCR_EN);   
 }
 
-
+/************************************************
+ *  DMA handlers.
+ ***********************************************/
 void DMA1_Channel3_IRQHandler()
 {
     if (DMA1->ISR & DMA_ISR_TEIF3)
@@ -992,6 +1013,10 @@ void DMA2_Channel7_IRQHandler()
     }
 }
 
+/**
+ * @brief Callback functions can be overwritten by the user.
+ * 
+ */
 __attribute__((weak)) void usart_dma_rx_hf_callback(USART_TypeDef *usart)
 {
 
@@ -1008,6 +1033,23 @@ __attribute__((weak)) void usart_dma_rx_err_callback(USART_TypeDef *usart)
 
 
 }
+
+#ifdef DEBUG_UART
+__attribute__((weak)) uint8_t uart_transmit_byte(uint8_t ch)
+{
+    uint32_t start = sys_get_systick();
+    while (!(USART2->ISR & USART_ISR_TXE))
+    {
+        if (sys_get_systick()-start>100)
+        {
+            return 1;
+        }
+    }
+    USART2->TDR = ch;
+    return 0;    
+}
+#endif
+
 
 
 /**
