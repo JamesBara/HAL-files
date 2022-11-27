@@ -1,3 +1,4 @@
+#if 0
 #ifndef STM32L452_USB_DESC_H
 #define STM32L452_USB_DESC_H
 
@@ -28,3 +29,4 @@ extern uint8_t configuration_descriptor[0x43];
 }
 #endif
 #endif //endif STM32L452_USB_DESC_H
+#endif

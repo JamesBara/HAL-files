@@ -276,26 +276,10 @@ void clock_conf_hse(uint32_t hse_freq, hse_clk_by hse_by)
 }
 
 /**
- * @brief 
- * 
-
- * @param clk_src This parameter sets the clock source and can be any of these values: 
- *               PLL_SRC_NONE = 0x00,
- *               PLL_SRC_MSI = 0x01,
- *               PLL_SRC_HSI = 0x02,
- *               PLL_SRC_HSE = 0x03
- * @param sysclk_freq 
- * @param pll48m1clk_freq 
- * @param pllp_freq 
- */
-
-
-
-/**
  * @brief Enable or change pll configuration.
  * 
  * @note If the combination of frequencies selected by the user cannot produce a valid result there won't be any changes in pll.
- * 
+ * @todo This function is too convoluted should be simplified.
  * @param clk_src This parameter sets the clock source and can be any of these values: 
  *               PLL_SRC_NONE = 0x00,
  *               PLL_SRC_MSI = 0x01,

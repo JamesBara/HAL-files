@@ -1,3 +1,5 @@
+#if 0
+
 #include "stm32l452_hal_usb_desc.h"
 
 
@@ -167,4 +169,5 @@ uint8_t configuration_descriptor[] __attribute__((__aligned__(2))) =
     0x00, ///<wMaxPacketSize higher byte
     0x10 ///<bInterval
 };
+#endif
 #endif

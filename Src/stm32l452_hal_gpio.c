@@ -88,22 +88,7 @@ static void gpio_mode_select(GPIO_TypeDef *gpio, gpio_pin_num num, gpio_mode mod
  */
 static GPIO_TypeDef *gpio_parse_gpio(gpio_pin pin)
 {
-	if ((pin>>0x04)==0x01)
-	{
-		return GPIOB;
-	}
-	else if ((pin>>0x04)==0x02)
-	{
-		return GPIOC;
-	}
-	else if ((pin>>0x04)==0x03)
-	{
-		return GPIOH;
-	}
-	else
-	{
-		return GPIOA;
-	}
+	return  (GPIO_TypeDef *)(AHB2PERIPH_BASE+(pin & 0xFFF0));
 }
 /**
  * @brief Parse the gpio_pin_num from one of the gpio pins.

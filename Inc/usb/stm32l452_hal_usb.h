@@ -1,3 +1,4 @@
+#if 0
 #ifndef STM32L452_USB_H
 #define STM32L452_USB_H
 
@@ -89,3 +90,4 @@ void usb_transmit(uint8_t *buffer, uint16_t size);
 }
 #endif
 #endif //endif STM32L452_USB_H
+#endif

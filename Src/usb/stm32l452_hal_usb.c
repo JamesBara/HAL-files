@@ -1,3 +1,5 @@
+#if 0
+
 #include "stm32l452_hal_usb.h"
 
 btable *p_btable;
@@ -516,3 +518,4 @@ static void usb_read_USB_SRAM(uint8_t EPn, uint8_t *data, uint16_t size)
         }
     }
 }
+#endif

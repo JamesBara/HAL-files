@@ -21,9 +21,7 @@ void dbg_init();
 #endif
 void error_handler(char* f,uint32_t l);
 
-//#define CoreDebug           ((CoreDebug_Type *)     CoreDebug_BASE)   /*!< Core Debug configuration struct */
-
 #ifdef __cplusplus
 }
 #endif
-#endif //endif STM32L452_USB_H
+#endif //endif STM32L452_DBG_H
