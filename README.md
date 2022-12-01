@@ -1,4 +1,4 @@
-This is a work in progress.
+~~This is a work in progress.~~ Project is in hiatus after managing to destroy my nucleo board while trying to solder external crystal.
 
 Custom HAL for stm32l452ret6.
 
